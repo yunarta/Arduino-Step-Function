@@ -10,12 +10,42 @@
  * This constructor initializes the step function based on the provided JSON configuration
  * and sets the callback function to handle user-defined tasks for specific states.
  *
- * @param jsonConfig The JSON configuration for the state machine.
  * @param callback A user-defined function callback to handle "Task" type states.
  */
-StepFunction::StepFunction(const char *jsonConfig, StepFunction::FunctionCallback callback) {
+StepFunction::StepFunction(StepFunction::FunctionCallback callback) {
     functionCallback = callback;
+}
 
+/**
+ * @brief Initializes the StepFunction with a JSON-based configuration.
+ *
+ * This function sets up the step function state machine by parsing the provided
+ * JSON configuration. It validates the input, deserializes the configuration,
+ * and initializes the current state with the "StartAt" value in the JSON.
+ *
+ * @param jsonConfig A C-string containing the JSON configuration. The JSON should
+ * include a "StartAt" field to determine the starting state.
+ *
+ * @note If the JSON parsing fails, an error message is printed, and the function
+ * terminates early without initializing the state.
+ *
+ * Example JSON configuration:
+ * @code
+ * {
+ *   "StartAt": "InitialState",
+ *   "States": {
+ *       "InitialState": {
+ *           "Type": "Task",
+ *           "Next": "FinalState"
+ *       },
+ *       "FinalState": {
+ *           "Type": "Succeed"
+ *       }
+ *   }
+ * }
+ * @endcode
+ */
+void StepFunction::setup(const char *jsonConfig) {
     // Deserialize the JSON configuration and check for errors
     DeserializationError error = deserializeJson(doc, jsonConfig);
     if (error) {
@@ -44,7 +74,10 @@ StepFunction::StepFunction(const char *jsonConfig, StepFunction::FunctionCallbac
  */
 int StepFunction::run() {
     // Check if still in wait state
-    if (millis() < waitUntil) return WAIT_DELAY; // Wait state delay
+    if (millis() < waitUntil) {
+        recommendedDelay = waitUntil - millis();
+        return WAIT_DELAY; // Wait state delay
+    }
 
     // Access "States" object from the parsed JSON document
     JsonObject states = doc["States"];
@@ -103,4 +136,69 @@ int StepFunction::run() {
     // Handle case where the state is invalid or not found
     Serial.println("Invalid state. Exiting...");
     return INVALID_STATE;
+}
+
+unsigned long StepFunction::getRecommendedDelay() {
+    return recommendedDelay;
+}
+
+
+/**
+ * @brief Saves the step function's internal state into a JSON object.
+ * 
+ * This function serializes the current state, global state, wait info, 
+ * and other relevant data into a JSON object. The generated JSON 
+ * can be used to persist the state across sessions.
+ * 
+ * @return A JSON string representing the saved state.
+ */
+String StepFunction::saveState() {
+    JsonDocument saveDoc; // Adjust size based on requirements
+
+    // Save the global state
+    saveDoc["GlobalState"] = globalState;
+
+    // Save the current state
+    saveDoc["CurrentState"] = currentState;
+
+    // Save the wait-related information
+    saveDoc["WaitUntil"] = waitUntil;
+    saveDoc["RecommendedDelay"] = recommendedDelay;
+
+    // Serialize and return the JSON string
+    String savedState;
+    serializeJson(saveDoc, savedState);
+    return savedState;
+}
+
+/**
+ * @brief Restores the step function's internal state from a JSON string.
+ * 
+ * This function recreates the state machine and global state from the 
+ * provided JSON string, allowing execution to resume from where it left off.
+ * 
+ * @param savedState A JSON string representing the previously saved state.
+ * @return True if the state was restored successfully; otherwise, false.
+ */
+bool StepFunction::restoreState(const String &savedState) {
+    JsonDocument restoreDoc; // Adjust size based on requirements
+
+    // Deserialize the provided JSON string
+    DeserializationError error = deserializeJson(restoreDoc, savedState);
+    if (error) {
+        Serial.println("Failed to parse saved state JSON");
+        return false;
+    }
+
+    // Restore the global state
+    globalState = restoreDoc["GlobalState"].as<JsonObject>();
+
+    // Restore the current state
+    currentState = restoreDoc["CurrentState"].as<String>();
+
+    // Restore the wait-related information
+    waitUntil = restoreDoc["WaitUntil"].as<unsigned long>();
+    recommendedDelay = restoreDoc["RecommendedDelay"].as<unsigned long>();
+
+    return true;
 }
