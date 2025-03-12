@@ -1,0 +1,25 @@
+{
+  "name": "arduino-step-function",
+  "version": "1.0.0",
+  "description": "A",
+  "keywords": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yunarta/arduino-step-function.git"
+  },
+  "authors": [
+    {
+      "name": "Yunarta Kartawahyudi",
+      "email": "yunarta.kartawahyudi@gmail.com",
+      "url": "https://github.com/yunarta",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/yunarta/",
+  "dependencies": {
+    "ArduinoJson": "~7.3.0"
+  },
+  "frameworks": "*",
+  "platforms": "*"
+}
