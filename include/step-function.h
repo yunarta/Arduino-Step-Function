@@ -6,6 +6,7 @@
 #define STEP_FUNCTION_H
 
 #include <ArduinoJson.h>
+#define LOG
 
 /**
  * @brief Enum representing the state of the StepFunction.
@@ -77,7 +78,7 @@ public:
      *
      * @return A JSON string representing the saved state.
      */
-    String StepFunction::saveState();
+    String saveState();
 
     /**
      * @brief Restores the step function's internal state from a JSON string.
@@ -88,7 +89,7 @@ public:
      * @param savedState A JSON string representing the previously saved state.
      * @return True if the state was restored successfully; otherwise, false.
      */
-    bool StepFunction::restoreState(const String &savedState);
+    bool restoreState(const String &savedState);
 };
 
 #endif //STEP_FUNCTION_H

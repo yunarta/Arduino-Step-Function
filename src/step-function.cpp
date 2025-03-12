@@ -3,6 +3,7 @@
 //
 
 #include "step-function.h"
+#include <Arduino.h>
 
 /**
  * @brief Constructs a StepFunction object.
@@ -76,6 +77,9 @@ int StepFunction::run() {
     // Check if still in wait state
     if (millis() < waitUntil) {
         recommendedDelay = waitUntil - millis();
+#ifdef LOG
+        Serial.println("Waiting... recommendedDelay set.");
+#endif
         return WAIT_DELAY; // Wait state delay
     }
 
@@ -86,17 +90,30 @@ int StepFunction::run() {
     if (!state.isNull()) {
         // Get the type of the current state
         String type = state["Type"].as<String>();
+#ifdef LOG
+        Serial.print("Processing state: ");
+        Serial.println(currentState);
+        Serial.print("State type: ");
+        Serial.println(type);
+#endif
 
         if (type == "Task") {
             // Handle "Task" state
             String resource = state["Resource"].as<String>();
-
+#ifdef LOG
+            Serial.print("Executing task with resource: ");
+            Serial.println(resource);
+#endif
             // Execute user-defined callback function
             functionCallback(resource, globalState);
 
             // Transition to the next state or end the process
             if (state["Next"].is<String>()) {
                 currentState = state["Next"].as<String>();
+#ifdef LOG
+                Serial.print("Transitioning to next state: ");
+                Serial.println(currentState);
+#endif
             } else {
                 // No next state means end of the state machine process
                 Serial.println("End of process.");
@@ -107,6 +124,11 @@ int StepFunction::run() {
             JsonArray choices = state["Choices"];
             String variable = state["Variable"].as<String>();
 
+#ifdef LOG
+            Serial.print("Evaluating choices for variable: ");
+            Serial.println(variable);
+#endif
+
             // Fetch value of the variable from global state
             String value = globalState[variable].as<String>();
             bool matched = false;
@@ -114,6 +136,10 @@ int StepFunction::run() {
             // Iterate through all choices to find a match
             for (JsonObject choice: choices) {
                 if (choice["StringEquals"].as<String>() == value) {
+#ifdef LOG
+                    Serial.print("Match found. Transitioning to: ");
+                    Serial.println(choice["Next"].as<String>());
+#endif
                     currentState = choice["Next"].as<String>();
                     matched = true;
                     break;
@@ -123,18 +149,31 @@ int StepFunction::run() {
             // Default state if no choices matched
             if (!matched) {
                 currentState = state["Default"].as<String>();
+#ifdef LOG
+                Serial.print("No match found. Transitioning to default state: ");
+                Serial.println(currentState);
+#endif
             }
         } else if (type == "Wait") {
             // Handle "Wait" state with timed delay
             int seconds = state["Seconds"].as<int>();
             waitUntil = millis() + (seconds * 1000); // Set delay time
             currentState = state["Next"].as<String>(); // Transition to the next state
+#ifdef LOG
+            Serial.print("Wait state detected. Delaying for ");
+            Serial.print(seconds);
+            Serial.println(" seconds.");
+            Serial.print("Next state: ");
+            Serial.println(currentState);
+#endif
         }
         return NEXT_STEP; // Signal successful transition to next state
     }
 
     // Handle case where the state is invalid or not found
+#ifdef LOG
     Serial.println("Invalid state. Exiting...");
+#endif
     return INVALID_STATE;
 }
 
