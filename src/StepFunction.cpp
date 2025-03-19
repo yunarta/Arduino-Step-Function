@@ -2,7 +2,7 @@
 // Created by yunarta on 3/12/25.
 //
 
-#include "step-function.h"
+#include "StepFunction.h"
 #include <Arduino.h>
 
 /**
@@ -77,8 +77,12 @@ int StepFunction::run() {
     // Check if still in wait state
     if (millis() < waitUntil) {
         recommendedDelay = waitUntil - millis();
+        if (recommendedDelay < 0) {
+            recommendedDelay = 0;
+        }
 #ifdef LOG
-        Serial.println("Waiting... recommendedDelay set.");
+        Serial.print("Waiting... recommendedDelay set.");
+        Serial.println(recommendedDelay);
 #endif
         return WAIT_DELAY; // Wait state delay
     }
@@ -98,6 +102,7 @@ int StepFunction::run() {
 #endif
 
         if (type == "Task") {
+            waitUntil = millis();
             // Handle "Task" state
             String resource = state["Resource"].as<String>();
 #ifdef LOG
@@ -120,6 +125,8 @@ int StepFunction::run() {
                 return END_OF_PROCESS;
             }
         } else if (type == "Choice") {
+            waitUntil = millis();
+
             // Handle "Choice" state for conditional branching
             JsonArray choices = state["Choices"];
             String variable = state["Variable"].as<String>();
@@ -131,11 +138,18 @@ int StepFunction::run() {
 
             // Fetch value of the variable from global state
             String value = globalState[variable].as<String>();
+            Serial.print("Variable value: ");
+            Serial.println(value);
+
             bool matched = false;
 
             // Iterate through all choices to find a match
             for (JsonObject choice: choices) {
-                if (choice["StringEquals"].as<String>() == value) {
+                auto expect = choice["StringEquals"].as<String>();
+                Serial.print("Choice: ");
+                Serial.println(expect);
+
+                if (expect == value) {
 #ifdef LOG
                     Serial.print("Match found. Transitioning to: ");
                     Serial.println(choice["Next"].as<String>());
@@ -156,15 +170,16 @@ int StepFunction::run() {
             }
         } else if (type == "Wait") {
             // Handle "Wait" state with timed delay
-            int seconds = state["Seconds"].as<int>();
-            waitUntil = millis() + (seconds * 1000); // Set delay time
+            int waitMillis = state["Millis"].as<int>();
+            waitUntil = millis() + waitMillis; // Set delay time
             currentState = state["Next"].as<String>(); // Transition to the next state
 #ifdef LOG
             Serial.print("Wait state detected. Delaying for ");
-            Serial.print(seconds);
-            Serial.println(" seconds.");
+            Serial.print(waitMillis);
+            Serial.println(" millis.");
             Serial.print("Next state: ");
             Serial.println(currentState);
+            return WAIT_DELAY; // Wait state delay
 #endif
         }
         return NEXT_STEP; // Signal successful transition to next state
