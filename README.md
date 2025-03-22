@@ -83,7 +83,7 @@ The state machine is configured using a JSON string. Below is the format require
     },
     "WaitState": {
       "Type": "Wait",
-      "Seconds": 5,
+      "Millis": 5,
       "Next": "FinalState"
     },
     "FinalState": {
@@ -106,7 +106,7 @@ The state machine is configured using a JSON string. Below is the format require
     - **`Variable`**: Defines the variable to evaluate in `"Choice"` states.
     - **`Choices`**: List of conditions to check for `"Choice"` states.
     - **`Default`**: State to transition to if no choice matches in `"Choice"` states.
-    - **`Seconds`**: Wait time in seconds for `"Wait"` states.
+    - **`Millis`**: Wait time in milliseconds for `"Wait"` states.
     - **`Next`**: Specifies the subsequent state.
 
 ---
@@ -131,7 +131,7 @@ void setup() {
         "StartAt": "StartState",
         "States": {
             "StartState": { "Type": "Task", "Resource": "Task1", "Next": "WaitState" },
-            "WaitState": { "Type": "Wait", "Seconds": 2, "Next": "FinalState" },
+            "WaitState": { "Type": "Wait", "Millis": 2, "Next": "FinalState" },
             "FinalState": { "Type": "Task", "Resource": "Task2" }
         }
     })";
